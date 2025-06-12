@@ -1,0 +1,86 @@
+---
+- name: Deploy DevOps Stack on GCP VM
+  hosts: devops_vm
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    devops_dir: /opt/devops
+    jenkins_port: 8080
+    sonarqube_port: 9000
+    grafana_port: 3000
+    prometheus_port: 9090
+    argocd_port: 8090
+    
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        
+    - name: Create devops directory
+      file:
+        path: "{{ devops_dir }}"
+        state: directory
+        mode: '0755'
+        
+  roles:
+    - docker
+
+  # Reiniciar conexión para que tome el grupo docker
+  tasks:
+    - name: Reset SSH connection for docker group
+      meta: reset_connection
+
+    - name: Wait for Docker daemon to be ready
+      wait_for:
+        port: 2375
+        host: localhost
+        timeout: 60
+      ignore_errors: yes
+
+    - name: Test Docker command
+      command: docker info
+      register: docker_info
+      become: no
+      ignore_errors: yes
+
+    - name: Debug Docker status
+      debug:
+        msg: "Docker status: {{ docker_info.rc }}"
+
+    - name: Create docker network
+      community.docker.docker_network:
+        name: devops-network
+        driver: bridge
+      become: no
+
+- name: Continue with other services
+  hosts: devops_vm
+  become: yes
+  gather_facts: no
+  
+  vars:
+    devops_dir: /opt/devops
+    jenkins_port: 8080
+    sonarqube_port: 9000
+    grafana_port: 3000
+    prometheus_port: 9090
+    # argocd_port: 8090
+        
+  roles:
+    - jenkins
+    - sonarqube  
+    - prometheus
+    - grafana
+    # - { role: argocd, tags: argocd }
+    
+  post_tasks:
+    - name: Display service URLs
+      debug:
+        msg:
+          - "Jenkins: http://{{ ansible_host }}:{{ jenkins_port }}"
+          - "SonarQube: http://{{ ansible_host }}:{{ sonarqube_port }}"
+          - "Grafana: http://{{ ansible_host }}:{{ grafana_port }}"
+          - "Prometheus: http://{{ ansible_host }}:{{ prometheus_port }}"
+          # - "ArgoCD: http://{{ ansible_host }}:{{ argocd_port }}"

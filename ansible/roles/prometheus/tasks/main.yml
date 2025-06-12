@@ -1,0 +1,30 @@
+---
+- name: Create Prometheus directory
+  file:
+    path: "{{ devops_dir }}/prometheus"
+    state: directory
+    mode: '0755'
+
+- name: Copy Prometheus configuration
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ devops_dir }}/prometheus/prometheus.yml"
+    mode: '0644'
+
+- name: Copy Prometheus docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/prometheus/docker-compose.yml"
+    mode: '0644'
+
+- name: Start Prometheus services
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/prometheus"
+    state: present
+
+- name: Wait for Prometheus to start
+  wait_for:
+    port: "{{ prometheus_port }}"
+    host: "{{ ansible_host }}"
+    delay: 15
+    timeout: 180

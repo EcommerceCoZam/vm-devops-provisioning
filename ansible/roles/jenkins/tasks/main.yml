@@ -1,0 +1,65 @@
+---
+- name: Create Jenkins directory
+  file:
+    path: "{{ devops_dir }}/jenkins"
+    state: directory
+    mode: '0755'
+
+- name: Create Jenkins home directory
+  file:
+    path: "{{ devops_dir }}/jenkins/jenkins_home"
+    state: directory
+    mode: '0755'
+    owner: 1000
+    group: 1000
+
+- name: Copy Jenkins Dockerfile
+  template:
+    src: Dockerfile.j2
+    dest: "{{ devops_dir }}/jenkins/Dockerfile"
+    mode: '0644'
+
+- name: Copy Jenkins docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/jenkins/docker-compose.yml"
+    mode: '0644'
+
+- name: Copy Jenkins initial configuration
+  template:
+    src: jenkins.yaml.j2
+    dest: "{{ devops_dir }}/jenkins/jenkins_home/jenkins.yaml"
+    mode: '0644'
+    owner: 1000
+    group: 1000
+
+- name: Copy Jenkins plugins list
+  template:
+    src: plugins.txt.j2
+    dest: "{{ devops_dir }}/jenkins/plugins.txt"
+    mode: '0644'
+
+- name: Build custom Jenkins image
+  docker_image:
+    name: jenkins-custom
+    build:
+      path: "{{ devops_dir }}/jenkins"
+      dockerfile: Dockerfile
+    source: build
+    state: present
+
+- name: Start Jenkins container
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/jenkins"
+    state: present
+
+- name: Wait for Jenkins to start
+  wait_for:
+    port: "{{ jenkins_port }}"
+    host: "{{ ansible_host }}"
+    delay: 30
+    timeout: 300
+
+- name: Display Jenkins initial admin password location
+  debug:
+    msg: "Jenkins initial admin password: docker exec jenkins-jenkins-1 cat /var/jenkins_home/secrets/initialAdminPassword"

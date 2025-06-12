@@ -1,0 +1,47 @@
+---
+- name: Create SonarQube directory
+  file:
+    path: "{{ devops_dir }}/sonarqube"
+    state: directory
+    mode: '0755'
+
+- name: Create SonarQube data directories
+  file:
+    path: "{{ devops_dir }}/sonarqube/{{ item }}"
+    state: directory
+    mode: '0777'
+  loop:
+    - data
+    - logs
+    - extensions
+
+- name: Set vm.max_map_count for Elasticsearch
+  sysctl:
+    name: vm.max_map_count
+    value: '262144'
+    state: present
+    reload: yes
+
+- name: Copy SonarQube docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/sonarqube/docker-compose.yml"
+    mode: '0644'
+
+- name: Start SonarQube services
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/sonarqube"
+    state: present
+
+- name: Wait for SonarQube to start
+  wait_for:
+    port: "{{ sonarqube_port }}"
+    host: "{{ ansible_host }}"
+    delay: 30
+    timeout: 300
+
+- name: Display SonarQube info
+  debug:
+    msg: 
+      - "SonarQube URL: http://{{ ansible_host }}:{{ sonarqube_port }}"
+      - "Default credentials: admin/admin"

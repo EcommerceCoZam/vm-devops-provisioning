@@ -1,0 +1,37 @@
+jenkins:
+  systemMessage: "Jenkins configured automatically by Ansible"
+  numExecutors: 2
+  mode: NORMAL
+  scmCheckoutRetryCount: 3
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: admin123
+          
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:admin"
+        - "Overall/Read:authenticated"
+        
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "REGISTRY_URL"
+            value: "{{ registry_url }}"
+          - key: "GCP_PROJECT_ID"
+            value: "{{ gcp_project_id }}"
+
+tool:
+  git:
+    installations:
+      - name: "Default"
+        home: "/usr/bin/git"
+        
+  dockerTool:
+    installations:
+      - name: "Docker"
+        home: "/usr/bin/docker"

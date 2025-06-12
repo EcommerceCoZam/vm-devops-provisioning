@@ -1,0 +1,42 @@
+---
+- name: Create ArgoCD directory
+  file:
+    path: "{{ devops_dir }}/argocd"
+    state: directory
+    mode: '0755'
+
+- name: Copy ArgoCD docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/argocd/docker-compose.yml"
+    mode: '0644'
+
+- name: Copy ArgoCD configuration
+  template:
+    src: argocd-server-config.yml.j2
+    dest: "{{ devops_dir }}/argocd/argocd-server-config.yml"
+    mode: '0644'
+
+- name: Start ArgoCD services
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/argocd"
+    state: present
+
+- name: Wait for ArgoCD to start
+  wait_for:
+    port: "{{ argocd_port }}"
+    host: "{{ ansible_host }}"
+    delay: 30
+    timeout: 300
+
+- name: Get ArgoCD initial admin password
+  shell: docker exec argocd-server cat /shared/app/initial-password.txt
+  register: argocd_password
+  ignore_errors: yes
+
+- name: Display ArgoCD info
+  debug:
+    msg: 
+      - "ArgoCD URL: http://{{ ansible_host }}:{{ argocd_port }}"
+      - "Username: admin"
+      - "Password: {{ argocd_password.stdout | default('Check container logs') }}"

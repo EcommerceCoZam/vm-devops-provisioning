@@ -1,0 +1,59 @@
+---
+- name: Create Grafana directory
+  file:
+    path: "{{ devops_dir }}/grafana"
+    state: directory
+    mode: '0755'
+
+- name: Create Grafana data directory
+  file:
+    path: "{{ devops_dir }}/grafana/data"
+    state: directory
+    mode: '0777'
+    owner: 472
+    group: 472
+
+- name: Create Grafana provisioning directories
+  file:
+    path: "{{ devops_dir }}/grafana/provisioning/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - datasources
+    - dashboards
+
+- name: Copy Grafana datasources configuration
+  template:
+    src: datasources.yml.j2
+    dest: "{{ devops_dir }}/grafana/provisioning/datasources/datasources.yml"
+    mode: '0644'
+
+- name: Copy Grafana dashboards configuration
+  template:
+    src: dashboards.yml.j2
+    dest: "{{ devops_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+    mode: '0644'
+
+- name: Copy Grafana docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/grafana/docker-compose.yml"
+    mode: '0644'
+
+- name: Start Grafana services
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/grafana"
+    state: present
+
+- name: Wait for Grafana to start
+  wait_for:
+    port: "{{ grafana_port }}"
+    host: "{{ ansible_host }}"
+    delay: 15
+    timeout: 180
+
+- name: Display Grafana info
+  debug:
+    msg: 
+      - "Grafana URL: http://{{ ansible_host }}:{{ grafana_port }}"
+      - "Default credentials: admin/admin"
