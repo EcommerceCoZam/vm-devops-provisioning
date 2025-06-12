@@ -14,6 +14,12 @@ RUN apt-get update && \
         software-properties-common && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Java 11
+RUN mkdir -p /opt && \
+    curl -L https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.23+9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.23_9.tar.gz | tar -xz -C /opt && \
+    mv /opt/jdk-11.0.23+9 /opt/jdk-11 && \
+    rm -rf /var/lib/apt/lists/* 
+    
 # Install Docker CLI
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
