@@ -1,0 +1,40 @@
+---
+- name: Deploy Trivy Security Scanner
+  hosts: devops_vm
+  become: yes
+  gather_facts: yes
+
+  vars:
+    devops_dir: /opt/devops
+    trivy_port: 9999
+
+  tasks:
+    - name: Include Trivy role
+      include_role:
+        name: trivy
+
+  post_tasks:
+    - name: Verify Trivy is running
+      uri:
+        url: "http://{{ ansible_host }}:{{ trivy_port }}/healthz"
+        method: GET
+        status_code: 200
+      register: trivy_health_check
+      retries: 5
+      delay: 10
+      until: trivy_health_check.status == 200
+
+    - name: Display Trivy service information
+      debug:
+        msg:
+          - "🔍 Trivy Security Scanner deployed successfully!"
+          - "📍 Server URL: http://{{ ansible_host }}:{{ trivy_port }}"
+          - "🏥 Health Check: http://{{ ansible_host }}:{{ trivy_port }}/healthz"
+          - "📊 API Documentation: http://{{ ansible_host }}:{{ trivy_port }}/swagger/index.html"
+          - ""
+          - "🛠️ Usage Examples:"
+          - "  # Scan image via API:"
+          - '  curl -X POST http://{{ ansible_host }}:{{ trivy_port }}/v1/images/scan -H ''Content-Type: application/json'' -d ''{"image": "alpine:latest"}'''
+          - ""
+          - "  # Scan image via CLI (from VM):"
+          - "  docker exec trivy-scanner trivy image --server http://trivy-server:{{ trivy_port }} alpine:latest"

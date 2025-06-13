@@ -3,31 +3,32 @@
   hosts: devops_vm
   become: yes
   gather_facts: yes
-  
+
   vars:
     devops_dir: /opt/devops
     jenkins_port: 8080
     sonarqube_port: 9000
     grafana_port: 3000
     prometheus_port: 9090
+    trivy_port: 9999
     argocd_port: 8090
-    
+
   pre_tasks:
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
-        
+
     - name: Create devops directory
       file:
         path: "{{ devops_dir }}"
         state: directory
-        mode: '0755'
-        
+        mode: "0755"
+
   roles:
     - docker
 
-  # Reiniciar conexión para que tome el grupo docker
+  # Restart connection to take Docker group
   tasks:
     - name: Reset SSH connection for docker group
       meta: reset_connection
@@ -59,22 +60,24 @@
   hosts: devops_vm
   become: yes
   gather_facts: no
-  
+
   vars:
     devops_dir: /opt/devops
     jenkins_port: 8080
     sonarqube_port: 9000
     grafana_port: 3000
     prometheus_port: 9090
+    trivy_port: 9999
     # argocd_port: 8090
-        
+
   roles:
     - jenkins
-    - sonarqube  
+    - sonarqube
     - prometheus
     - grafana
+    - trivy
     # - { role: argocd, tags: argocd }
-    
+
   post_tasks:
     - name: Display service URLs
       debug:
@@ -83,4 +86,5 @@
           - "SonarQube: http://{{ ansible_host }}:{{ sonarqube_port }}"
           - "Grafana: http://{{ ansible_host }}:{{ grafana_port }}"
           - "Prometheus: http://{{ ansible_host }}:{{ prometheus_port }}"
+          - "Trivy: http://{{ ansible_host }}:{{ trivy_port }}"
           # - "ArgoCD: http://{{ ansible_host }}:{{ argocd_port }}"

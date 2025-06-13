@@ -1,0 +1,57 @@
+---
+- name: Create Trivy directory
+  file:
+    path: "{{ devops_dir }}/trivy"
+    state: directory
+    mode: "0755"
+
+- name: Create Trivy data directories
+  file:
+    path: "{{ devops_dir }}/trivy/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - data
+    - cache
+    - reports
+
+- name: Copy Trivy docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ devops_dir }}/trivy/docker-compose.yml"
+    mode: "0644"
+
+- name: Copy Trivy server configuration
+  template:
+    src: trivy-server.yaml.j2
+    dest: "{{ devops_dir }}/trivy/trivy-server.yaml"
+    mode: "0644"
+
+- name: Start Trivy services
+  community.docker.docker_compose_v2:
+    project_src: "{{ devops_dir }}/trivy"
+    state: present
+
+- name: Wait for Trivy server to start
+  wait_for:
+    port: "{{ trivy_port }}"
+    host: "{{ ansible_host }}"
+    delay: 15
+    timeout: 180
+
+- name: Test Trivy server connection
+  uri:
+    url: "http://{{ ansible_host }}:{{ trivy_port }}/healthz"
+    method: GET
+    status_code: 200
+  register: trivy_health
+  retries: 5
+  delay: 10
+  until: trivy_health.status == 200
+
+- name: Display Trivy info
+  debug:
+    msg:
+      - "Trivy Server URL: http://{{ ansible_host }}:{{ trivy_port }}"
+      - "Trivy API endpoint: http://{{ ansible_host }}:{{ trivy_port }}/v1"
+      - "Health check: http://{{ ansible_host }}:{{ trivy_port }}/healthz"

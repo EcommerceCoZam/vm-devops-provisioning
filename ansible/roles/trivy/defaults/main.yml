@@ -1,0 +1,5 @@
+---
+trivy_port: 9999
+trivy_version: latest
+trivy_cache_dir: /cache
+trivy_reports_dir: /reports
