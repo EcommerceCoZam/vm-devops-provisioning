@@ -1,0 +1,71 @@
+services:
+  trivy-server:
+    image: aquasec/trivy:latest
+    container_name: trivy-server
+    command: 
+      - server
+      - --listen
+      - 0.0.0.0:{{ trivy_port }}
+      - --cache-dir
+      - /cache
+      - --db-repository
+      - ghcr.io/aquasecurity/trivy-db:2
+    ports:
+      - "{{ trivy_port }}:{{ trivy_port }}"
+    volumes:
+      - trivy_cache:/cache
+      - trivy_db:/db
+      - ./reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TRIVY_LISTEN=0.0.0.0:{{ trivy_port }}
+      - TRIVY_CACHE_DIR=/cache
+      - TRIVY_DEBUG=false
+      - TRIVY_QUIET=false
+      - TRIVY_NO_PROGRESS=true
+    networks:
+      - devops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "trivy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Cliente Trivy para escaneos programados
+  trivy-scanner:
+    image: aquasec/trivy:latest
+    container_name: trivy-scanner
+    command: 
+      - sh
+      - -c
+      - |
+        echo "Trivy Scanner ready for scheduled scans"
+        while true; do
+          echo "Scanner heartbeat: $(date)"
+          sleep 3600
+        done
+    volumes:
+      - trivy_cache:/cache
+      - ./reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TRIVY_SERVER=http://trivy-server:{{ trivy_port }}
+      - TRIVY_CACHE_DIR=/cache
+    networks:
+      - devops-network
+    depends_on:
+      trivy-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  trivy_cache:
+    driver: local
+  trivy_db:
+    driver: local
+
+networks:
+  devops-network:
+    external: true

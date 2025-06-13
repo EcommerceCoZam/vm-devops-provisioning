@@ -1,0 +1,34 @@
+# Trivy Server Configuration
+server:
+  listen: "0.0.0.0:{{ trivy_port }}"
+  
+cache:
+  dir: "/cache"
+  
+db:
+  repository: "ghcr.io/aquasecurity/trivy-db"
+  
+java-db:
+  repository: "ghcr.io/aquasecurity/trivy-java-db"
+
+# Logging configuration
+log:
+  level: "info"
+  format: "json"
+
+# Vulnerability scanning configuration
+vulnerability:
+  type: ["os", "library"]
+  
+# Security scanning configuration  
+security:
+  checks: ["vuln", "secret", "config"]
+  
+# Output configuration
+output:
+  format: "json"
+  template: ""
+  
+# Timeout configuration
+timeout:
+  default: "5m"
